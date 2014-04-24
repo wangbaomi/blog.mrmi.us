@@ -1,0 +1,391 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>获取进程CPU占有率 | Mr.Mi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Mr.Mi">
+    
+    <meta name="description" content="Windows在使用期间，有时候会变得很慢很慢，所以要记录一下是哪些进程大量占有了cpu时间。
+
+首先将系统中所有的进程枚举出来
+然后一个个地计算每个进程的cpu占用时间
+
+使用NtQuerySystemInformation
+枚举所有进程
+MS的网站上给出了几种方法:
+
+使用 ToolHelp32">
+    
+    
+    
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="wangbaomi" />
+    <meta name="twitter:title" content="获取进程CPU占有率 | Mr.Mi" />
+      
+    
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/pacman.png">
+    <link rel="apple-touch-icon-precomposed" href="/img/pacman.png">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/logo.png" alt="Mr.Mi" title="Mr.Mi"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Mr.Mi">Mr.Mi</a></h1>
+				<h2 class="blog-motto">Stay hungry, stay foolish !</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">Home</a></li>
+					
+						<li><a href="/archives">Archives</a></li>
+					
+					<li>
+					
+					<form class="search" action="/search/index.html" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" autocomplete="off" name="q" maxlength="20" placeholder="Search" />
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2014/04/01/获取进程cpu占有率/" title="获取进程CPU占有率" itemprop="url">获取进程CPU占有率</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://plus.google.com/106164632756067522586?rel=author" title="Mr.Mi" target="_blank" itemprop="author">Mr.Mi</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2014-04-01T14:01:32.000Z" itemprop="datePublished">Apr 1 2014</time>
+    Updated:<time datetime="2014-04-01T12:59:03.000Z" itemprop="dateModified">Apr 1 2014</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#-ntquerysysteminformation"><span class="toc-number">1.</span> <span class="toc-text">使用NtQuerySystemInformation</span></a></li><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#-"><span class="toc-number">1.1.</span> <span class="toc-text">枚举所有进程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#-"><span class="toc-number">1.2.</span> <span class="toc-text">一些笔记</span></a></li></ol><li class="toc-item toc-level-2"><a class="toc-link" href="#-c-process-"><span class="toc-number">2.</span> <span class="toc-text">使用C# Process类</span></a></li></ol>
+		</div>
+		
+		<p>Windows在使用期间，有时候会变得很慢很慢，所以要记录一下是哪些进程大量占有了cpu时间。</p>
+<ul>
+<li>首先将系统中所有的进程枚举出来</li>
+<li>然后一个个地计算每个进程的cpu占用时间</li>
+</ul>
+<h2 id="-ntquerysysteminformation">使用NtQuerySystemInformation</h2>
+<h3 id="-">枚举所有进程</h3>
+<p>MS的网站上给出了几种<a href="http://support.microsoft.com/kb/175030/zh-cn" target="_blank">方法</a>:</p>
+<ol>
+<li><p>使用 ToolHelp32 库</p>
+<blockquote>
+<p>使用 ToolHelp32 函数的第一步是创建系统信息的&quot;快照&quot;。可以使用 CreateToolhelp32Snapshot() 函数完成这一步。此函数允许选择在快照中存储的信息类型。如果您需要进程信息，则一定要包括 TH32CS_SNAPPROCESS 标志。CreateToolhelp32Snapshot() 函数返回一个句柄，在使用完该句柄后，必须将其传递到 CloseHandle()。</p>
+</blockquote>
+</li>
+<li><p>使用 PSAPI 库</p>
+<blockquote>
+<p>调用 EnumProcesses().</p>
+</blockquote>
+</li>
+</ol>
+<p>第一种方式不知道MS以后还支不支持，没有试过；第二种方式在枚举进程时枚举出来的进程不全，没有深入研究；后来找到了使用<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms724509(v=vs.85).aspx" target="_blank">NtQuerySystemInformation</a>来枚举所有进程并计算cpu占用率的现成代码，便直接拿来用了。</p>
+<p>代码放在：<a href="https://github.com/wangbaomi/CpuInfo" target="_blank"><a href="https://github.com/wangbaomi/CpuInfo">https://github.com/wangbaomi/CpuInfo</a></a></p>
+<p>测试时发现，在win7 32位和win2012环境下都能正常使用，但<strong>在win7 64位环境下枚举到的进程数却是0...</strong></p>
+<h3 id="-">一些笔记</h3>
+<ol>
+<li>指针不能随便强转</li>
+<li>程序需要提权EnableDebugPrivilege()</li>
+<li>获取本地时间，使用GetLocalTime()</li>
+</ol>
+<h2 id="-c-process-">使用C# Process类</h2>
+<p>由于使用NtQuerySystemInformation无法在win7 64位上枚举出进程，便想直接拿C#来做了。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/windows,cpu,process/">windows,cpu,process</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/测试/">测试</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="http://blog.mrmi.us/2014/04/01/获取进程cpu占有率/" data-title="获取进程CPU占有率 | Mr.Mi" data-tsina="1770940715" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2014/03/18/html中嵌入优酷播放器/"  title="html中嵌入优酷播放器">
+ <strong>NEXT:</strong><br/> 
+ <span>html中嵌入优酷播放器
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section class="comment">
+	<div class="ds-thread"></div>
+</section>
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="Show Sidebar"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#-ntquerysysteminformation"><span class="toc-number">1.</span> <span class="toc-text">使用NtQuerySystemInformation</span></a></li><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#-"><span class="toc-number">1.1.</span> <span class="toc-text">枚举所有进程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#-"><span class="toc-number">1.2.</span> <span class="toc-text">一些笔记</span></a></li></ol><li class="toc-item toc-level-2"><a class="toc-link" href="#-c-process-"><span class="toc-number">2.</span> <span class="toc-text">使用C# Process类</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div>
+<aside class="clearfix">
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/hello/" title="hello">hello<sup>1</sup></a></li>
+		
+			<li><a href="/categories/扯蛋/" title="扯蛋">扯蛋<sup>1</sup></a></li>
+		
+			<li><a href="/categories/测试/" title="测试">测试<sup>2</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="tagcloudlist">
+    <p class="asidetitle">Tag Cloud</p>
+    <div class="tagcloudlist clearfix">
+       <a href="/tags/hello/" style="font-size: NaNpx;">hello</a><a href="/tags/windows,cpu,process/" style="font-size: NaNpx;">windows,cpu,process</a><a href="/tags/youku/" style="font-size: NaNpx;">youku</a><a href="/tags/浏览器/" style="font-size: NaNpx;">浏览器</a>
+    </div>
+  </div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">Links</p>
+    <ul>
+      <li><a href="http://yangjian.me" target="_blank" title="YangJian">Alimon's Blog</a></li>
+      <li><a href="http://zespia.tw/hexo" target="_blank" title="Hexo">Hexo</a></li>
+    </ul>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> A Dreamer. <br/>
+			Imagination Rules The World.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/wangbaomi" target="_blank" title="weibo"></a>
+		
+		
+		<a href="https://twitter.com/wangbaomi" target="_blank" title="twitter"></a>
+		
+		
+		<a href="https://github.com/wangbaomi" target="_blank" title="github"></a>
+		
+		
+	</div>
+		<p class="copyright">Powered by <a href="http://zespia.tw/hexo/" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/A-limon/pacman" target="_blank" title="Pacman">Pacman</a> © 2014 
+		
+		<a href="http://blog.mrmi.us" target="_blank" title="Mr.Mi">Mr.Mi</a>
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+    c.click(function(){
+      ta.css('display', 'block').addClass('fadeIn');
+    });
+    o.click(function(){
+      ta.css('display', 'none');
+    });
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,320-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"mrmi"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-48392988-2', 'blog.mrmi.us## e.g. yangjian.me your google analytics site or set the value as auto.');  
+ga('send', 'pageview');
+</script>
+
+
+  </body>
+</html>
